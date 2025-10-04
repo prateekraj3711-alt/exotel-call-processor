@@ -26,6 +26,7 @@ EXOTEL_API_TOKEN = os.getenv('EXOTEL_API_TOKEN', '5b6e0ba111cc82717ffa89cc376d4a
 SLACK_BOT_TOKEN = os.getenv('SLACK_BOT_TOKEN', 'xoxb-9603666278855-9651417565664-e3ojaluTEZRHumWwXwwLSl5k')
 SLACK_CHANNEL = os.getenv('SLACK_CHANNEL', 'C09K19DFXT2')
 SLACK_WEBHOOK = os.getenv('SLACK_WEBHOOK', 'https://hooks.slack.com/services/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')
+DEEPGRAM_API_KEY = os.getenv('DEEPGRAM_API_KEY', '8ee5702190b142447a7ae419e66b4450dcfeae4c')
 
 # Initialize scheduler
 scheduler = BackgroundScheduler()
@@ -157,6 +158,7 @@ class MultiAgentCallProcessor:
         self.slack_bot_token = SLACK_BOT_TOKEN
         self.slack_channel = SLACK_CHANNEL
         self.slack_webhook = SLACK_WEBHOOK
+        self.deepgram_api_key = DEEPGRAM_API_KEY
         
         # Agent configuration
         self.agents = {
@@ -317,8 +319,9 @@ class MultiAgentCallProcessor:
         try:
             logger.info(f"=== UPLOADING VOICE RECORDING FOR {call_sid} ===")
             
-            # Download the recording
-            audio_response = requests.get(recording_url, timeout=30)
+            # Download the recording with Exotel authentication
+            auth = requests.auth.HTTPBasicAuth(self.exotel_api_key, self.exotel_api_token)
+            audio_response = requests.get(recording_url, auth=auth, timeout=30)
             if audio_response.status_code != 200:
                 logger.error(f"Failed to download recording: {audio_response.status_code}")
                 return {'success': False, 'error': 'Failed to download recording'}
@@ -383,7 +386,7 @@ class MultiAgentCallProcessor:
         """Transcribe audio using Deepgram"""
         try:
             logger.info("=== TRANSCRIBING AUDIO ===")
-            deepgram_api_key = "8ee5702190b142447a7ae419e66b4450dcfeae4c"
+            deepgram_api_key = self.deepgram_api_key
             
             headers = {
                 'Authorization': f'Token {deepgram_api_key}',
