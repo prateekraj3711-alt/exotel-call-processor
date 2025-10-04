@@ -345,7 +345,7 @@ class MultiAgentCallProcessor:
             upload_url_response = requests.post(
                 'https://slack.com/api/files.getUploadURLExternal',
                 headers={'Authorization': f'Bearer {self.slack_bot_token}'},
-                data={
+                json={
                     'filename': f'call_{call_sid}.mp3',
                     'length': len(audio_data),
                     'alt_txt': f'Call Recording - {call_sid}',
@@ -356,36 +356,43 @@ class MultiAgentCallProcessor:
             
             if upload_url_response.status_code == 200:
                 upload_data = upload_url_response.json()
+                logger.info(f"Upload URL response: {upload_data}")
                 if upload_data.get('ok'):
                     upload_url = upload_data['upload_url']
                     file_id = upload_data['file_id']
-                    
-                    # Upload the file
-                    upload_response = requests.post(
-                        upload_url,
-                        files={'file': ('call_recording.mp3', audio_data, 'audio/mp3')},
-                        timeout=60
-                    )
-                    
-                    if upload_response.status_code == 200:
-                        # Complete upload
-                        complete_response = requests.post(
-                            'https://slack.com/api/files.completeUploadExternal',
-                            headers={'Authorization': f'Bearer {self.slack_bot_token}'},
-                            data={
-                                'files': json.dumps([{
-                                    'id': file_id,
-                                    'title': f'Call Recording - {call_sid}',
-                                    'channels': self.slack_channel,
-                                    'initial_comment': f'🎧 **Call Recording - {call_sid}**\n📞 Duration: {duration//60}m {duration%60}s | From: {from_number} to {to_number}'
-                                }])
-                            },
-                            timeout=30
-                        )
-                        
-                        if complete_response.status_code == 200:
-                            logger.info("✅ Voice recording uploaded successfully")
-                            return {'success': True, 'file_id': file_id}
+                else:
+                    logger.error(f"Upload URL failed: {upload_data}")
+                    return {'success': False, 'error': f"Upload URL failed: {upload_data.get('error', 'Unknown error')}"}
+            else:
+                logger.error(f"Upload URL request failed: {upload_url_response.status_code} - {upload_url_response.text}")
+                return {'success': False, 'error': f"Upload URL request failed: {upload_url_response.status_code}"}
+            
+            # Upload the file
+            upload_response = requests.post(
+                upload_url,
+                files={'file': ('call_recording.mp3', audio_data, 'audio/mp3')},
+                timeout=60
+            )
+            
+            if upload_response.status_code == 200:
+                # Complete upload
+                complete_response = requests.post(
+                    'https://slack.com/api/files.completeUploadExternal',
+                    headers={'Authorization': f'Bearer {self.slack_bot_token}'},
+                    data={
+                        'files': json.dumps([{
+                            'id': file_id,
+                            'title': f'Call Recording - {call_sid}',
+                            'channels': self.slack_channel,
+                            'initial_comment': f'🎧 **Call Recording - {call_sid}**\n📞 Duration: {duration//60}m {duration%60}s | From: {from_number} to {to_number}'
+                        }])
+                    },
+                    timeout=30
+                )
+                
+                if complete_response.status_code == 200:
+                    logger.info("✅ Voice recording uploaded successfully")
+                    return {'success': True, 'file_id': file_id}
             
             logger.error("❌ Voice recording upload failed")
             return {'success': False, 'error': 'Upload failed'}
@@ -407,12 +414,10 @@ class MultiAgentCallProcessor:
             
             payload = {
                 'url': recording_url,
-                'model': 'nova-2-general',
-                'language': 'en-US',
+                'model': 'nova-2',
+                'language': 'en',
                 'punctuate': True,
-                'smart_format': True,
-                'diarize': False,
-                'detect_language': False
+                'smart_format': True
             }
             
             response = requests.post(
