@@ -86,6 +86,7 @@ def status():
     return jsonify({
         'status': 'healthy',
         'uptime': 'running',
+        'version': 'v2.1 - Voice Uploads & Transcriptions Enabled',
         'scheduler_running': scheduler.running,
         'processor_initialized': processor is not None,
         'last_check': datetime.now().isoformat(),
@@ -112,6 +113,17 @@ def scheduler_status():
         'scheduler_running': scheduler.running,
         'jobs': jobs,
         'job_count': len(jobs)
+    })
+
+@app.route('/debug')
+def debug():
+    """Debug endpoint to check current configuration"""
+    return jsonify({
+        'version': 'v2.1 - Voice Uploads & Transcriptions Enabled',
+        'deepgram_api_key_set': bool(os.getenv('DEEPGRAM_API_KEY')),
+        'slack_bot_token_set': bool(os.getenv('SLACK_BOT_TOKEN')),
+        'exotel_credentials_set': bool(os.getenv('EXOTEL_API_KEY') and os.getenv('EXOTEL_API_TOKEN')),
+        'current_time': datetime.now().isoformat()
     })
 
 @app.route('/logs')
