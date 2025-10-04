@@ -137,10 +137,10 @@ def scheduled_call_processing():
     except Exception as e:
         logger.error(f"Scheduled processing error: {str(e)}")
 
-# Schedule the call processing job to run every 5 minutes
+# Schedule the call processing job to run every 3 minutes
 scheduler.add_job(
     func=scheduled_call_processing,
-    trigger=IntervalTrigger(minutes=5),
+    trigger=IntervalTrigger(minutes=3),
     id='call_processing_job',
     name='Call Processing Job',
     replace_existing=True
@@ -262,8 +262,8 @@ class MultiAgentCallProcessor:
             # Determine call direction
             call_direction, support_number, customer_number = self.determine_call_direction(from_number, to_number)
             
-            # Upload voice recording
-            voice_result = self.upload_voice_to_slack(call_sid, recording_url, from_number, to_number, duration, start_time_ist)
+            # Skip voice upload for now (focus on summaries)
+            voice_result = {'success': False, 'error': 'Voice upload disabled - focus on summaries'}
             
             # Transcribe audio
             transcript = self.transcribe_audio(recording_url)
@@ -396,9 +396,10 @@ class MultiAgentCallProcessor:
             payload = {
                 'url': recording_url,
                 'model': 'nova-2',
-                'language': 'en-US',
+                'language': 'en',
                 'punctuate': True,
-                'smart_format': True
+                'smart_format': True,
+                'diarize': False
             }
             
             response = requests.post(
