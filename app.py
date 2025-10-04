@@ -262,8 +262,8 @@ class MultiAgentCallProcessor:
             # Determine call direction
             call_direction, support_number, customer_number = self.determine_call_direction(from_number, to_number)
             
-            # Skip voice upload for now (focus on summaries)
-            voice_result = {'success': False, 'error': 'Voice upload disabled - focus on summaries'}
+            # Upload voice recording
+            voice_result = self.upload_voice_to_slack(call_sid, recording_url, from_number, to_number, duration, start_time_ist)
             
             # Transcribe audio
             transcript = self.transcribe_audio(recording_url)
@@ -395,11 +395,12 @@ class MultiAgentCallProcessor:
             
             payload = {
                 'url': recording_url,
-                'model': 'nova-2',
-                'language': 'en',
+                'model': 'nova-2-general',
+                'language': 'en-US',
                 'punctuate': True,
                 'smart_format': True,
-                'diarize': False
+                'diarize': False,
+                'detect_language': False
             }
             
             response = requests.post(
